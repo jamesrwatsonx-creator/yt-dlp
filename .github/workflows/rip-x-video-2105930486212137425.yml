@@ -1,0 +1,53 @@
+name: Rip X video
+
+on:
+  push:
+    branches:
+      - x-video-rip-2105930486212137425
+
+jobs:
+  rip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download with yt-dlp
+        shell: bash
+        run: |
+          set -euxo pipefail
+          OUT="alervg-2105930486212137425.mp4"
+          if python3 -m yt_dlp -f "bv*+ba/b" --merge-output-format mp4 -o "$OUT" "https://x.com/AleRVG/status/2105930486212137425"; then
+            test -s "$OUT"
+          else
+            echo "yt-dlp direct extraction failed; trying VXTwitter metadata fallback"
+            curl -fL "https://api.vxtwitter.com/AleRVG/status/2105930486212137425" -o tweet.json
+            VIDEO_URL="$(python3 - <<'PY'
+import json
+with open('tweet.json', encoding='utf-8') as f:
+    d=json.load(f)
+cands=[]
+for item in d.get('media_extended', []) or []:
+    if item.get('type') in ('video','gif') and item.get('url'):
+        cands.append(item['url'])
+for u in d.get('mediaURLs', []) or []:
+    if isinstance(u,str) and ('.mp4' in u or 'video.twimg.com' in u):
+        cands.append(u)
+if not cands:
+    raise SystemExit('No video URL found')
+print(cands[0])
+PY
+)"
+            curl -fL "$VIDEO_URL" -o "$OUT"
+            test -s "$OUT"
+          fi
+          ffprobe -v error -show_entries format=duration,size -show_entries stream=codec_name,width,height -of json "$OUT" | tee metadata.json
+
+      - name: Upload ripped video
+        uses: actions/upload-artifact@v4
+        with:
+          name: alervg-x-video-2105930486212137425
+          path: |
+            alervg-2105930486212137425.mp4
+            metadata.json
+          if-no-files-found: error
+          retention-days: 1
