@@ -1,0 +1,24 @@
+name: X video rip
+on:
+  push:
+    branches:
+      - x-video-rip-2105930486212137425
+  workflow_dispatch:
+jobs:
+  rip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download X video
+        run: |
+          python -m pip install -U .
+          mkdir -p output
+          yt-dlp --no-playlist --merge-output-format mp4 -o "output/AleRVG-2105930486212137425.%(ext)s" "https://x.com/AleRVG/status/2105930486212137425"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AleRVG-2105930486212137425
+          path: output/*
+          if-no-files-found: error
