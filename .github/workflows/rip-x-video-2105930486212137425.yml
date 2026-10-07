@@ -11,21 +11,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+
       - name: Download with yt-dlp
         shell: bash
         run: |
           set -euxo pipefail
           OUT="alervg-2105930486212137425.mp4"
-          if python3 -m yt_dlp -f "bv*+ba/b" --merge-output-format mp4 -o "$OUT" "https://x.com/AleRVG/status/2105930486212137425"; then
-            test -s "$OUT"
-          else
-            echo "yt-dlp direct extraction failed; trying VXTwitter metadata fallback"
-            curl -fL "https://api.vxtwitter.com/AleRVG/status/2105930486212137425" -o tweet.json
-            VIDEO_URL="$(jq -r '[.media_extended[]?.url, .mediaURLs[]?] | map(select(type == "string" and (contains(".mp4") or contains("video.twimg.com")))) | .[0] // empty' tweet.json)"
-            test -n "$VIDEO_URL"
-            curl -fL "$VIDEO_URL" -o "$OUT"
-            test -s "$OUT"
-          fi
+          python3 -m yt_dlp -f "bv*+ba/b" --merge-output-format mp4 -o "$OUT" "https://x.com/AleRVG/status/2105930486212137425"
+          test -s "$OUT"
           ffprobe -v error -show_entries format=duration,size -show_entries stream=codec_name,width,height -of json "$OUT" | tee metadata.json
 
       - name: Upload ripped video
